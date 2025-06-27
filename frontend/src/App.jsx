@@ -1,58 +1,59 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import Navbars from "../components/Navbars";
-import MyCarousel from "../components/MyCarousel";
-import BookCard from "../components/BookCard";
+// src/App.jsx
+import { Route, Routes } from "react-router";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-function App() {
-  const [books, setBooks] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("bestsellers");
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import MyBooks from "./pages/MyBooks";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AddBook from "./pages/AddBook";
+import ProfilePage from "./pages/ProfilePage";
+import BookDetails from "./pages/BookDetails"; // ✅ Import the BookDetails component
 
-  useEffect(() => {
-    const fetchBooks = async () => {
-      try {
-        const response = await axios.get(
-          `http://localhost:5001/api/books/search?q=${searchQuery}&maxResults=20`
-        );
-        setBooks(response.data);
-      } catch (error) {
-        console.error("Error fetching books:", error);
-      }
-    };
-    fetchBooks();
-  }, [searchQuery]);
-
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-  };
-
+const App = () => {
   return (
-    <div className='flex flex-col min-h-screen'>
-      <Navbars onSearch={handleSearch} />
-      <div className='pt-16'>
-        <MyCarousel />
-        <div className='p-4'>
-          <p className='text-gray-700 mb-6'>
-            Explore our collection of {books.length} books below the carousel.
-          </p>
-          <div className='flex w-full flex-col'>
-            <div className='card bg-base-300 rounded-box grid h-20 place-items-center'>
-             
-            </div>
-          </div>
-          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1'>
-            {books.length > 0 ? (
-              books.map((book) => <BookCard key={book.id} book={book} />)
-            ) : (
-              <p className='text-gray-500'>
-                No books found. Try a different search!
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+    <>
+      <ToastContainer position='top-center' autoClose={3000} />
+
+      <Routes>
+        {/* Public routes */}
+        <Route path='/' element={<Home />} />
+        <Route path='/login' element={<Login />} />
+        <Route path='/register' element={<Register />} />
+
+        {/* Book Details - public so guests can view */}
+        <Route path='/books/:id' element={<BookDetails />} />
+
+        {/* Protected routes */}
+        <Route
+          path='/my-books'
+          element={
+            <ProtectedRoute>
+              <MyBooks />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/profile'
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/add-book'
+          element={
+            <ProtectedRoute>
+              <AddBook />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
   );
-}
+};
 
 export default App;

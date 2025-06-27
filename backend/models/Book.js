@@ -1,54 +1,58 @@
 const mongoose = require("mongoose");
 
-// Define a schema for individual comments
-// This allows each comment to have a user reference, text content, and a timestamp
+// Sub-schema for individual comments
 const commentSchema = new mongoose.Schema({
-  // Reference to the User who posted the comment
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  // The actual comment text
-  text: { type: String, required: true },
-  // Timestamp to track when the comment was created
+  userId: {
+    type: mongoose.Types.ObjectId,
+    ref: "User",
+  },
+  username: { type: String, required: true },
+  comment: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
 });
 
-// Define the main schema for books
-// This will hold all the book information and references to ratings and comments
+// Main schema for books
 const bookSchema = new mongoose.Schema(
   {
-    // Title of the book (required)
+    googleVolumeId: { type: String, unique: true, sparse: true },
+
     title: { type: String, required: true },
-
-    // Author of the book (required)
     author: { type: String, required: true },
-
-    // Genre of the book (required)
-    genre: { type: String, required: true },
-
-    // Optional brief description or synopsis of the book
+    genre: { type: String },
     description: { type: String },
-
-    // Optional URL for a book cover image
     coverImageUrl: { type: String },
+    publisher: { type: String },
+    publishedDate: { type: String },
+    thumbnail: { type: String },
 
-    // Reference to the user who recommended the book
     recommendedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
-    // Array of ratings with the rating user and their score
     ratings: [
       {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        score: { type: Number, min: 1, max: 5 }, // Score is between 1 and 5
+        userId: {
+          type: mongoose.Types.ObjectId,
+          ref: "User",
+        },
+        username: String,
+        score: { type: Number, min: 1, max: 5 },
       },
     ],
 
-    // Array of comments using the commentSchema defined above
     comments: [commentSchema],
   },
   {
-    // Automatically add createdAt and updatedAt timestamps
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Export the Book model based on the schema
-module.exports = mongoose.model("Book", bookSchema);
+// Virtual to calculate average rating
+bookSchema.virtual("averageRating").get(function () {
+  if (!this.ratings || this.ratings.length === 0) return 0;
+  const sum = this.ratings.reduce((acc, r) => acc + r.score, 0);
+  return sum / this.ratings.length;
+});
+
+const bookModel = mongoose.model("Book", bookSchema);
+module.exports = bookModel;

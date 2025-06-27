@@ -21,7 +21,7 @@ mongoose
 
 // Mount routes
 app.use("/api/users", userRoutes);
-// app.use('/api/books', bookRoutes); // mount other routes as needed
+app.use('/api/books', bookRoutes); // mount other routes as needed
 
 // Test route
 app.get("/", (req, res) => {
