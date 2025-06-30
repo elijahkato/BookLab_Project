@@ -173,7 +173,7 @@ export default function Navbars() {
                       navigate("/login");
                       setIsMenuOpen(false);
                     }}
-                    className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200 text-sm' // MODIFIED: Added text-sm
+                    className='px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200 text-sm' // MODIFIED: Added text-sm
                     aria-label='Sign in'
                   >
                     Sign In
@@ -183,7 +183,7 @@ export default function Navbars() {
                       navigate("/register");
                       setIsMenuOpen(false);
                     }}
-                    className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200 text-sm' // MODIFIED: Added text-sm
+                    className='px-1 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200 text-sm' // MODIFIED: Added text-sm
                     aria-label='Sign up'
                   >
                     Sign Up
@@ -212,7 +212,7 @@ export default function Navbars() {
                 className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200 text-sm' // MODIFIED: Added text-sm
                 aria-label='Search'
               >
-                Go
+                Search
               </button>
             </form>
           </div>
