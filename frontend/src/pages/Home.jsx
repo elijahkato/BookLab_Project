@@ -3,9 +3,9 @@ import axios from "axios";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Button, Select, Spinner } from "flowbite-react";
-import Navbars from "../components/Navbars"; 
-import MyCarousel from "../components/MyCarousel"; 
-import BookCard from "../components/BookCard"; 
+import Navbars from "../components/Navbars";
+import MyCarousel from "../components/MyCarousel";
+import BookCard from "../components/BookCard";
 
 /**
  * Home component to display popular books with category selection
@@ -32,7 +32,9 @@ export default function Home() {
     setError(null);
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/books/google-books?q=${encodeURIComponent(
+        `${
+          process.env.REACT_APP_API_URL
+        }/api/books/google-books?q=${encodeURIComponent(
           category
         )}&maxResults=12`,
         { timeout: 10000 }
@@ -115,7 +117,7 @@ export default function Home() {
                     <>
                       <Spinner
                         color='success'
-                        size="lg"
+                        size='lg'
                         aria-label='Success spinner example'
                       />
                       Retrying...

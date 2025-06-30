@@ -97,7 +97,7 @@ function BookCard({ book, isAuthenticated, onUpdateUserBooks }) {
       setIsLoading(true);
       try {
         const [response] = await Promise.all([
-          axios.get(`http://localhost:3000/api/books/${book.id}`, {
+          axios.get(`${process.env.REACT_APP_API_URL}/api/books/${book.id}`, {
             headers: { Authorization: `Bearer ${token}` },
             timeout: 10000,
           }),
@@ -146,10 +146,14 @@ function BookCard({ book, isAuthenticated, onUpdateUserBooks }) {
           ? book.volumeInfo.categories.join(", ")
           : "",
       };
-      await axios.post("http://localhost:3000/api/books/add", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000,
-      });
+      await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/books/add`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
+        }
+      );
       setIsAdded(true);
       toast.success(`${book.volumeInfo.title} added to your list!`);
       if (onUpdateUserBooks) onUpdateUserBooks();
@@ -167,10 +171,13 @@ function BookCard({ book, isAuthenticated, onUpdateUserBooks }) {
 
   const handleRemoveBook = async () => {
     try {
-      await axios.delete(`http://localhost:3000/api/books/${book.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000,
-      });
+      await axios.delete(
+        `${process.env.REACT_APP_API_URL}/api/books/${book.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
+        }
+      );
       setIsAdded(false);
       toast.success(`${book.volumeInfo.title} removed from your list`);
       if (onUpdateUserBooks) onUpdateUserBooks();
