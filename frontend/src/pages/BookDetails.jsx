@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
- import { useParams } from "react-router";
+import { useParams } from "react-router";
 import { useSelector } from "react-redux";
 import axios from "axios";
 import { toast } from "react-toastify";
 import Navbars from "../components/Navbars";
 import parse from "html-react-parser";
 import { Button } from "flowbite-react";
+
+// Define the API base URL for your backend
+// Vite requires environment variables to be prefixed with VITE_
+// Use the name you set in Vercel, e.g., VITE_REACT_APP_API_URL or VITE_API_URL
+const API_BASE_URL =
+  import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:3000";
 
 export default function BookDetails() {
   const { id } = useParams();
@@ -28,7 +34,8 @@ export default function BookDetails() {
       }
 
       try {
-        const res = await axios.get(`http://localhost:3000/api/books/${id}`, {
+        // Use API_BASE_URL here
+        const res = await axios.get(`${API_BASE_URL}/api/books/${id}`, {
           headers: isAuthenticated ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.data || res.data.error) {
@@ -51,8 +58,9 @@ export default function BookDetails() {
 
   const handleAddToMyList = async () => {
     try {
+      // Use API_BASE_URL here
       await axios.post(
-        "http://localhost:3000/api/books/add",
+        `${API_BASE_URL}/api/books/add`,
         {
           googleVolumeId: id,
           title: book.volumeInfo?.title || "Untitled",
@@ -74,7 +82,8 @@ export default function BookDetails() {
 
   const handleRemoveFromList = async () => {
     try {
-      await axios.delete(`http://localhost:3000/api/books/${id}`, {
+      // Use API_BASE_URL here
+      await axios.delete(`${API_BASE_URL}/api/books/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success(`${book.volumeInfo.title} removed from your list`);
@@ -90,8 +99,9 @@ export default function BookDetails() {
       return toast.error("Please enter a comment or rating");
     }
     try {
+      // Use API_BASE_URL here
       await axios.post(
-        "http://localhost:3000/api/books/add",
+        `${API_BASE_URL}/api/books/add`,
         {
           googleVolumeId: id,
           title: book.volumeInfo?.title || "Untitled",
@@ -109,7 +119,8 @@ export default function BookDetails() {
       toast.success("Your rating and comment were saved!");
       setNewRating(0);
       setNewComment("");
-      const updated = await axios.get(`http://localhost:3000/api/books/${id}`, {
+      // Use API_BASE_URL here
+      const updated = await axios.get(`${API_BASE_URL}/api/books/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBook({ ...updated.data, comments: updated.data.comments || [] });
@@ -146,7 +157,7 @@ export default function BookDetails() {
         <div className='flex flex-col md:flex-row gap-6'>
           <img
             src={
-             volume?.imageLinks?.thumbnail ||
+              volume?.imageLinks?.thumbnail ||
               "https://via.placeholder.com/200x300?text=No+Cover"
             }
             className='w-48 h-64 object-contain rounded'

@@ -5,6 +5,13 @@ import { useNavigate } from "react-router";
 import { toast } from "react-toastify";
 import { clearAuth } from "../store/authSlice";
 
+// Define the API base URL for your backend
+// Vite requires environment variables to be prefixed with VITE_
+// So, if your Vercel env var is REACT_APP_API_URL, access it as VITE_REACT_APP_API_URL
+// Or, rename your Vercel env var to VITE_API_URL and use import.meta.env.VITE_API_URL
+const API_BASE_URL =
+  import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:3000";
+
 // --- Custom Button Component (Replaces Flowbite Button) ---
 // You might want to move this to a separate file like components/CustomButton.jsx
 const CustomButton = ({
@@ -97,7 +104,8 @@ function BookCard({ book, isAuthenticated, onUpdateUserBooks }) {
       setIsLoading(true);
       try {
         const [response] = await Promise.all([
-          axios.get(`${process.env.REACT_APP_API_URL}/api/books/${book.id}`, {
+          // Use API_BASE_URL here
+          axios.get(`${API_BASE_URL}/api/books/${book.id}`, {
             headers: { Authorization: `Bearer ${token}` },
             timeout: 10000,
           }),
@@ -146,14 +154,11 @@ function BookCard({ book, isAuthenticated, onUpdateUserBooks }) {
           ? book.volumeInfo.categories.join(", ")
           : "",
       };
-      await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/books/add`,
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000,
-        }
-      );
+      // Use API_BASE_URL here
+      await axios.post(`${API_BASE_URL}/api/books/add`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000,
+      });
       setIsAdded(true);
       toast.success(`${book.volumeInfo.title} added to your list!`);
       if (onUpdateUserBooks) onUpdateUserBooks();
@@ -171,13 +176,11 @@ function BookCard({ book, isAuthenticated, onUpdateUserBooks }) {
 
   const handleRemoveBook = async () => {
     try {
-      await axios.delete(
-        `${process.env.REACT_APP_API_URL}/api/books/${book.id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000,
-        }
-      );
+      // Use API_BASE_URL here
+      await axios.delete(`${API_BASE_URL}/api/books/${book.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000,
+      });
       setIsAdded(false);
       toast.success(`${book.volumeInfo.title} removed from your list`);
       if (onUpdateUserBooks) onUpdateUserBooks();

@@ -5,6 +5,13 @@ import { setCredentials } from "../store/authSlice"; // Adjust path to your auth
 import axios from "axios";
 import { toast } from "react-toastify";
 
+// Define the API base URL for your backend
+// Vite requires environment variables to be prefixed with VITE_
+// So, if your Vercel env var is REACT_APP_API_URL, access it as VITE_REACT_APP_API_URL
+// Or, rename your Vercel env var to VITE_API_URL and use import.meta.env.VITE_API_URL
+const API_BASE_URL =
+  import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:3000";
+
 export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -18,8 +25,9 @@ export default function RegisterForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Use the dynamically set API_BASE_URL here
       const res = await axios.post(
-        "http://localhost:3000/api/users/register",
+        `${API_BASE_URL}/api/users/register`,
         {
           firstName,
           lastName,

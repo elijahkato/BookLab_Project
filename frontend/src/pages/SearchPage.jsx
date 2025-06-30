@@ -8,6 +8,13 @@ import { clearAuth } from "../store/authSlice";
 import BookCard from "../components/BookCard";
 import Navbars from "../components/Navbars";
 
+// Define the API base URL for your backend
+// Vite requires environment variables to be prefixed with VITE_
+// So, if your Vercel env var is REACT_APP_API_URL, access it as VITE_REACT_APP_API_URL
+// Or, rename your Vercel env var to VITE_API_URL and use import.meta.env.VITE_API_URL
+const API_BASE_URL =
+  import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:3000";
+
 /**
  * SearchPage component for searching books by title, author, genre, or category
  * with top padding to prevent navbar overlap, 5 cards per row on large screens,
@@ -58,7 +65,8 @@ function SearchPage() {
     const fetchUserBooks = async () => {
       try {
         setIsLoading(true);
-        const res = await axios.get("http://localhost:3000/api/books/me", {
+        // Use API_BASE_URL here
+        const res = await axios.get(`${API_BASE_URL}/api/books/me`, {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000,
         });
@@ -82,8 +90,9 @@ function SearchPage() {
     try {
       setIsLoading(true);
       const startIndex = (page - 1) * maxResults;
+      // Use API_BASE_URL here
       const res = await axios.get(
-        `http://localhost:3000/api/books/google-books?q=${encodeURIComponent(
+        `${API_BASE_URL}/api/books/google-books?q=${encodeURIComponent(
           query
         )}&startIndex=${startIndex}&maxResults=${maxResults}`,
         { timeout: 10000 }
@@ -102,24 +111,14 @@ function SearchPage() {
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setCurrentPage(1);
-      setSearchParams({ query: searchQuery.trim(), page: "1" });
-      fetchBooks(searchQuery.trim(), 1);
-    } else {
-      toast.error("Please enter a search term");
-    }
-  };
-
   const updateUserBooks = async () => {
     if (!isAuthenticated) {
       console.log("Skipping updateUserBooks for guest");
       return;
     }
     try {
-      const res = await axios.get("http://localhost:3000/api/books/me", {
+      // Use API_BASE_URL here
+      const res = await axios.get(`${API_BASE_URL}/api/books/me`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });
@@ -132,6 +131,17 @@ function SearchPage() {
         navigate("/login");
       }
       // Skip toast for guests or other errors
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setCurrentPage(1);
+      setSearchParams({ query: searchQuery.trim(), page: "1" });
+      fetchBooks(searchQuery.trim(), 1);
+    } else {
+      toast.error("Please enter a search term");
     }
   };
 

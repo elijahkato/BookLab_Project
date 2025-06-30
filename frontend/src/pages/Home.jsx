@@ -7,6 +7,11 @@ import Navbars from "../components/Navbars";
 import MyCarousel from "../components/MyCarousel";
 import BookCard from "../components/BookCard";
 
+// Define the API base URL for your backend
+// Using the VITE_REACT_APP_API_URL environment variable as renamed on Vercel
+const API_BASE_URL =
+  import.meta.env.VITE_REACT_APP_API_URL;
+
 /**
  * Home component to display popular books with category selection
  * @returns {JSX.Element} Home page with carousel and book grid
@@ -31,10 +36,9 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
+      // Use the dynamically set API_BASE_URL here
       const response = await axios.get(
-        `${
-          process.env.REACT_APP_API_URL
-        }/api/books/google-books?q=${encodeURIComponent(
+        `${API_BASE_URL}/api/books/google-books?q=${encodeURIComponent(
           category
         )}&maxResults=12`,
         { timeout: 10000 }
@@ -94,7 +98,7 @@ export default function Home() {
             </p>
           )}
           <div
-            className='grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3  lg:grid-cols-4 gap-5 px-10'
+            className='grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3  lg:grid-cols-4 gap-5 px-10'
             role='grid'
             aria-label='Popular books grid'
           >

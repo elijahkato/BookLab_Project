@@ -5,6 +5,11 @@ import { setCredentials } from "../store/authSlice";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+// Define the API base URL for your backend
+// This should be the same as defined in your Home.jsx and other API-calling files
+const API_BASE_URL =
+  import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:3000";
+
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,7 +19,8 @@ export default function LoginForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:3000/api/users/login", {
+      // Use the dynamically set API_BASE_URL here
+      const res = await axios.post(`${API_BASE_URL}/api/users/login`, {
         email,
         password,
       });
@@ -25,7 +31,6 @@ export default function LoginForm() {
         toast.success(`Welcome back, ${username}!`);
         navigate("/"); // Redirect to home
       }
-      
     } catch (error) {
       console.error("Error during login:", error.message);
       toast.error(
