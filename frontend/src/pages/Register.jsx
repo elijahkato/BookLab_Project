@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router"; // Fixed import
 import { useDispatch } from "react-redux";
-import { login } from "../store/authSlice"; // Adjust path to your authSlice
+import { setCredentials } from "../store/authSlice"; // Adjust path to your authSlice
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -33,7 +33,7 @@ export default function RegisterForm() {
 
       if (res.status === 201) {
         const { token, username } = res.data;
-        dispatch(login({ token, username }));
+        dispatch(setCredentials({ token, username }));
         localStorage.setItem("token", token); // Store token for persistence
         toast.success(`Welcome, ${username}! Registration successful!`);
         navigate("/login"); // Redirect to login or "/" for auto-login
