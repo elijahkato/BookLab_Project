@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router";
+ import { useParams } from "react-router";
 import { useSelector } from "react-redux";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -9,7 +9,6 @@ import { Button } from "flowbite-react";
 
 export default function BookDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const token =
     useSelector((state) => state.auth.token) || localStorage.getItem("token");
   const isAuthenticated = !!token;

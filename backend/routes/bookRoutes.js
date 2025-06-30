@@ -7,27 +7,84 @@ const Book = require("../models/Book");
 
 const router = express.Router();
 
-// Fetch from Google Books
+// Search Google Books
 router.get("/google-books", async (req, res) => {
   try {
-    const { q = "fiction", maxResults = 20 } = req.query;
+    const { q = "fiction", startIndex = 0, maxResults = 10 } = req.query;
     const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
     if (!apiKey) throw new Error("Google Books API key is missing");
+
+    // Check cache first
+    const cachedBooks = await Book.find({
+      $or: [
+        { title: { $regex: q, $options: "i" } },
+        { author: { $regex: q, $options: "i" } },
+        { genre: { $regex: q, $options: "i" } },
+      ],
+    })
+      .skip(Number(startIndex))
+      .limit(Number(maxResults));
+    if (cachedBooks.length >= maxResults) {
+      return res.status(200).json({
+        items: cachedBooks.map((book) => ({
+          id: book.googleVolumeId,
+          volumeInfo: {
+            title: book.title,
+            authors: book.author.split(", "),
+            publisher: book.publisher,
+            publishedDate: book.publishedDate,
+            description: book.description,
+            categories: book.genre.split(", "),
+            imageLinks: { thumbnail: book.thumbnail },
+          },
+        })),
+        totalItems: await Book.countDocuments({
+          $or: [
+            { title: { $regex: q, $options: "i" } },
+            { author: { $regex: q, $options: "i" } },
+            { genre: { $regex: q, $options: "i" } },
+          ],
+        }),
+      });
+    }
+
+    // Fetch from Google Books
     const response = await axios.get(
       `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
         q
-      )}&maxResults=${maxResults}&key=${apiKey}`
+      )}&startIndex=${startIndex}&maxResults=${maxResults}&key=${apiKey}`,
+      { timeout: 10000 }
     );
-    res.status(200).json(response.data.items || []);
+    const books = response.data.items || [];
+    for (const item of books) {
+      const googleVolumeId = item.id;
+      const v = item.volumeInfo;
+      await Book.findOneAndUpdate(
+        { googleVolumeId },
+        {
+          googleVolumeId,
+          title: v.title || "Untitled",
+          author: v.authors ? v.authors.join(", ") : "Unknown",
+          publisher: v.publisher || "",
+          publishedDate: v.publishedDate || "",
+          thumbnail: v.imageLinks?.thumbnail || "",
+          genre: v.categories ? v.categories.join(", ") : "",
+          description: v.description || "",
+        },
+        { upsert: true }
+      );
+    }
+    res.status(200).json({
+      items: books,
+      totalItems: response.data.totalItems || 0,
+    });
   } catch (error) {
     console.error("Error fetching books from Google:", error.message);
-    res
-      .status(500)
-      .json({ error: "Error fetching books from Google Books API" });
+    res.status(503).json({ error: "Google Books API unavailable" });
   }
 });
 
-// Save/Add Book or Comment/Rating
+// Save/Add Book or Recommendation
 router.post("/add", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
@@ -41,67 +98,91 @@ router.post("/add", auth, async (req, res) => {
       publishedDate,
       thumbnail,
       description,
-      rating,
       genre,
+      rating,
       comment,
     } = req.body;
 
-    // Fetch book data from Google if not fully provided
-    if (googleVolumeId && (!title || !author)) {
-      const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
-      if (!apiKey) throw new Error("Google Books API key is missing");
-      const response = await axios.get(
-        `https://www.googleapis.com/books/v1/volumes/${googleVolumeId}?key=${apiKey}`
-      );
-      const v = response.data.volumeInfo;
-      title = v.title || "Untitled";
-      author = v.authors ? v.authors.join(", ") : "Unknown";
-      publisher = v.publisher || "";
-      publishedDate = v.publishedDate || "";
-      thumbnail =
-        v.imageLinks?.large ||
-        v.imageLinks?.medium ||
-        v.imageLinks?.thumbnail ||
-        "";
-      genre = v.categories ? v.categories.join(", ") : "";
-      description = v.description || "";
+    if (!googleVolumeId || !title || !author) {
+      return res
+        .status(400)
+        .json({ error: "Google Volume ID, title, and author are required" });
     }
 
-    if (!title || !author) {
-      return res.status(400).json({ error: "Title and author are required" });
-    }
-
-    // Save to global Book collection only for comments or ratings
     let book = await Book.findOne({ googleVolumeId });
-    if (comment || rating) {
-      if (!book) {
-        book = new Book({
-          googleVolumeId,
-          title,
-          author,
-          publisher,
-          publishedDate,
-          thumbnail,
-          genre,
-          description,
-        });
+    if (
+      !book ||
+      !publisher ||
+      !publishedDate ||
+      !thumbnail ||
+      !description ||
+      !genre
+    ) {
+      try {
+        const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
+        if (!apiKey) throw new Error("Google Books API key is missing");
+        const response = await axios.get(
+          `https://www.googleapis.com/books/v1/volumes/${googleVolumeId}?key=${apiKey}`,
+          { timeout: 10000 }
+        );
+        const v = response.data.volumeInfo;
+        title = v.title || title;
+        author = v.authors ? v.authors.join(", ") : author;
+        publisher = v.publisher || publisher || "";
+        publishedDate = v.publishedDate || publishedDate || "";
+        thumbnail = v.imageLinks?.thumbnail || thumbnail || "";
+        genre = v.categories ? v.categories.join(", ") : genre || "";
+        description = v.description || description || "";
+        book = await Book.findOneAndUpdate(
+          { googleVolumeId },
+          {
+            googleVolumeId,
+            title,
+            author,
+            publisher,
+            publishedDate,
+            thumbnail,
+            genre,
+            description,
+          },
+          { upsert: true, new: true }
+        );
+      } catch (error) {
+        console.error("Error fetching Google Books data:", error.message);
+        if (!book) {
+          book = new Book({
+            googleVolumeId,
+            title,
+            author,
+            publisher: publisher || "",
+            publishedDate: publishedDate || "",
+            thumbnail: thumbnail || "",
+            genre: genre || "",
+            description: description || "",
+          });
+        }
       }
+    }
 
-      // Add or update rating
+    if (rating || comment) {
       if (rating) {
+        if (rating < 1 || rating > 5) {
+          return res
+            .status(400)
+            .json({ error: "Rating must be between 1 and 5" });
+        }
         const existingRating = book.ratings.find(
           (r) => r.userId.toString() === req.user.userId
         );
-        if (existingRating) existingRating.score = rating;
+        if (existingRating) existingRating.rating = rating;
         else
           book.ratings.push({
             userId: req.user.userId,
             username: user.username,
-            score: rating,
+            rating,
           });
       }
 
-      // Add comment
       if (comment) {
         book.comments.push({
           userId: req.user.userId,
@@ -110,10 +191,14 @@ router.post("/add", auth, async (req, res) => {
         });
       }
 
+      if (book.ratings.length > 0) {
+        const totalRating = book.ratings.reduce((sum, r) => sum + r.rating, 0);
+        book.averageRating = totalRating / book.ratings.length;
+      }
+
       await book.save();
     }
 
-    // Save to user's myBooks only if explicitly adding or commenting/rating
     let myBook = user.myBooks.find((b) => b.googleVolumeId === googleVolumeId);
 
     if (!myBook) {
@@ -127,13 +212,7 @@ router.post("/add", auth, async (req, res) => {
         description: description || "",
         genre: genre || "",
         ratings: rating
-          ? [
-              {
-                username: user.username,
-                rating: rating,
-                userId: req.user.userId,
-              },
-            ]
+          ? [{ username: user.username, rating, userId: req.user.userId }]
           : [],
         comments: comment
           ? [{ username: user.username, comment, userId: req.user.userId }]
@@ -155,7 +234,7 @@ router.post("/add", auth, async (req, res) => {
         else
           myBook.ratings.push({
             username: user.username,
-            rating: rating,
+            rating,
             userId: req.user.userId,
           });
       }
@@ -181,46 +260,93 @@ router.post("/add", auth, async (req, res) => {
 router.get("/:googleVolumeId", async (req, res) => {
   try {
     const googleVolumeId = req.params.googleVolumeId;
-    const promises = [
-      axios.get(
-        `https://www.googleapis.com/books/v1/volumes/${googleVolumeId}?key=${process.env.GOOGLE_BOOKS_API_KEY}`
-      ),
-      Book.findOne({ googleVolumeId }),
-    ];
+    if (!googleVolumeId) throw new Error("Invalid Google Volume ID");
 
-    // If authenticated, fetch user to check myBooks
+    let googleResponse = null;
+    let book = await Book.findOne({ googleVolumeId });
+
+    try {
+      const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
+      if (!apiKey) throw new Error("Google Books API key is missing");
+      googleResponse = await axios.get(
+        `https://www.googleapis.com/books/v1/volumes/${googleVolumeId}?key=${apiKey}`,
+        { timeout: 10000 }
+      );
+      const v = googleResponse.data.volumeInfo;
+      book = await Book.findOneAndUpdate(
+        { googleVolumeId },
+        {
+          googleVolumeId,
+          title: v.title || book?.title || "Untitled",
+          author: v.authors ? v.authors.join(", ") : book?.author || "Unknown",
+          publisher: v.publisher || book?.publisher || "",
+          publishedDate: v.publishedDate || book?.publishedDate || "",
+          thumbnail: v.imageLinks?.thumbnail || book?.thumbnail || "",
+          genre: v.categories ? v.categories.join(", ") : book?.genre || "",
+          description: v.description || book?.description || "",
+          averageRating: book?.averageRating || 0,
+        },
+        { upsert: true, new: true }
+      );
+    } catch (error) {
+      console.error(
+        "Google Books API error:",
+        error.response?.status || error.message
+      );
+      if (!book) {
+        return res
+          .status(503)
+          .json({
+            error: "Google Books API unavailable and no local data found",
+          });
+      }
+    }
+
+    let user = null;
     if (req.headers.authorization) {
       try {
         const token = req.headers.authorization.split(" ")[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        promises.push(User.findById(decoded.userId));
+        user = await User.findById(decoded.userId);
       } catch (error) {
         console.error("Invalid token:", error.message);
-        promises.push(Promise.resolve(null));
       }
-    } else {
-      promises.push(Promise.resolve(null));
     }
 
-    const [googleResponse, book, user] = await Promise.all(promises);
-
-    const imageLinks = googleResponse.data.volumeInfo?.imageLinks || {};
-    const thumbnail =
-      imageLinks.large || imageLinks.medium || imageLinks.thumbnail || "";
-
-    const responseData = {
-      ...googleResponse.data,
-      volumeInfo: {
-        ...googleResponse.data.volumeInfo,
-        imageLinks: { ...imageLinks, thumbnail },
-      },
-      comments: book?.comments || [],
-      ratings: book?.ratings || [],
-      averageRating: book?.averageRating || 0,
-      isAdded: user
-        ? user.myBooks.some((b) => b.googleVolumeId === googleVolumeId)
-        : false,
-    };
+    const responseData = googleResponse
+      ? {
+          ...googleResponse.data,
+          volumeInfo: {
+            ...googleResponse.data.volumeInfo,
+            imageLinks: googleResponse.data.volumeInfo?.imageLinks || {
+              thumbnail: book?.thumbnail || "",
+            },
+          },
+          comments: book?.comments || [],
+          ratings: book?.ratings || [],
+          averageRating: book?.averageRating || 0,
+          isAdded: user
+            ? user.myBooks.some((b) => b.googleVolumeId === googleVolumeId)
+            : false,
+        }
+      : {
+          id: googleVolumeId,
+          volumeInfo: {
+            title: book?.title || "Untitled",
+            authors: book?.author ? book.author.split(", ") : ["Unknown"],
+            publisher: book?.publisher || "",
+            publishedDate: book?.publishedDate || "",
+            description: book?.description || "",
+            categories: book?.genre ? book.genre.split(", ") : [],
+            imageLinks: { thumbnail: book?.thumbnail || "" },
+          },
+          comments: book?.comments || [],
+          ratings: book?.ratings || [],
+          averageRating: book?.averageRating || 0,
+          isAdded: user
+            ? user.myBooks.some((b) => b.googleVolumeId === googleVolumeId)
+            : false,
+        };
 
     res.status(200).json(responseData);
   } catch (error) {
@@ -234,7 +360,8 @@ router.get("/:googleVolumeId", async (req, res) => {
 // Get User's Saved Books
 router.get("/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.userId).select("myBooks");
+    if (!user) return res.status(404).json({ error: "User not found" });
     res.status(200).json(user.myBooks || []);
   } catch (error) {
     console.error("Error fetching user books:", error.message);
@@ -242,7 +369,7 @@ router.get("/me", auth, async (req, res) => {
   }
 });
 
-// Remove Book From User's List
+// Remove Book
 router.delete("/:id", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);

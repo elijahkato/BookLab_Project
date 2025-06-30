@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AddBook from "./pages/AddBook";
 import ProfilePage from "./pages/ProfilePage";
 import BookDetails from "./pages/BookDetails"; // ✅ Import the BookDetails component
+import SearchPage from "./pages/SearchPage";
 
 const App = () => {
   return (
@@ -22,6 +23,7 @@ const App = () => {
         <Route path='/' element={<Home />} />
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Register />} />
+        <Route path='/search' element={<SearchPage />} />
 
         {/* Book Details - public so guests can view */}
         <Route path='/books/:id' element={<BookDetails />} />

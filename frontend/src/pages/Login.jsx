@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useDispatch } from "react-redux";
-import { login } from "../store/authSlice";
+import { setCredentials } from "../store/authSlice";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -21,7 +21,7 @@ export default function LoginForm() {
 
       if (res.status === 200) {
         const { token, username } = res.data; // extract both
-        dispatch(login({ token, username })); // dispatch them together
+        dispatch(setCredentials({ token, username })); // dispatch them together
         toast.success(`Welcome back, ${username}!`);
         navigate("/"); // Redirect to home
       }
